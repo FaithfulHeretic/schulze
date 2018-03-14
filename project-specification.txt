@@ -1,0 +1,33 @@
+{
+  prefix [org liberalist]
+  name [schulze]
+  description 'Schulze flavor of the Condorcet method for voting'
+  version 0.1-SNAPSHOT
+  developer {
+    name PrincipledLiberal
+    githubName FaithfulHeretic
+    mavenUserName PrincipledLiberal
+    organization Liberalist
+    url http://liberalist.org
+  }
+  dependencies {
+    scala-library {
+      group org.scala-lang
+      artifact scala-library
+    }
+    scala-test {
+      group org.scalatest
+      artifact scalatest_2.12
+      scope test
+    }
+  }
+  global [scala-library scala-test]
+  modules {
+    console         [domain]
+    domain          []
+    prototype       []
+  }
+  consoleEntryPoint {
+    console org.liberalist.schulze.EntryPoint
+  }
+}
