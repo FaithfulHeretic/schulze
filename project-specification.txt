@@ -28,6 +28,7 @@
     prototype       []
   }
   consoleEntryPoint {
-    console org.liberalist.schulze.EntryPoint
+    console org.liberalist.schulze.console.EntryPoint
+    prototype org.liberalist.schulze.prototype.PrototypeApp
   }
 }
