@@ -1,57 +1,52 @@
 package org.liberalist.schulze.prototype
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+
+import scala.annotation.tailrec
+
+import scala.collection.JavaConverters._
+
 object PrototypeApp extends App {
+  val path = Paths.get(args(0))
+  val charset = StandardCharsets.UTF_8
+  val ballotLines = Files.readAllLines(path, charset).asScala
 
   case class Ballot(candidates: String*) {
     if (candidates != candidates.distinct) throw new RuntimeException("Duplicate candidate")
   }
 
-  //  val ballots = Seq(
-  //    Ballot("kappa", "beta", "alpha", "gamma", "delta"),
-  //    Ballot("kappa", "alpha", "delta", "gamma", "beta"),
-  //    Ballot("beta", "kappa", "alpha", "delta", "gamma"),
-  //    Ballot("delta", "gamma", "alpha", "beta", "kappa"),
-  //    Ballot("delta", "alpha", "beta", "gamma", "kappa"),
-  //    Ballot("gamma", "alpha", "beta", "kappa", "delta"),
-  //    Ballot("kappa", "gamma", "delta", "alpha", "beta"),
-  //    Ballot("delta", "alpha", "kappa", "gamma", "beta"),
-  //    Ballot("kappa", "gamma", "delta", "beta", "alpha"),
-  //    Ballot("kappa", "gamma", "delta", "beta", "alpha"),
-  //    Ballot("alpha", "kappa", "delta", "beta", "gamma"),
-  //    Ballot("delta", "beta", "gamma", "alpha", "kappa"),
-  //    Ballot("delta", "beta", "alpha", "gamma", "kappa"),
-  //    Ballot("delta", "alpha", "beta", "gamma", "kappa"),
-  //    Ballot("beta", "alpha", "kappa", "gamma", "delta"),
-  //    Ballot("gamma", "delta", "kappa", "beta", "alpha"),
-  //    Ballot("alpha", "kappa", "gamma", "beta", "delta"),
-  //    Ballot("alpha", "delta", "gamma", "kappa", "beta"),
-  //    Ballot("kappa", "gamma", "alpha", "beta", "delta"),
-  //    Ballot("beta", "alpha", "delta", "kappa", "gamma"),
-  //    Ballot("beta", "kappa", "alpha", "delta", "gamma"),
-  //    Ballot("alpha", "gamma", "kappa", "beta", "delta"),
-  //    Ballot("gamma", "alpha", "beta", "delta", "kappa"),
-  //    Ballot("gamma", "beta", "alpha", "delta", "kappa"),
-  //    Ballot("beta", "kappa", "delta", "alpha", "gamma"),
-  //    Ballot("alpha", "delta", "gamma", "kappa", "beta"),
-  //    Ballot("kappa", "beta", "gamma", "alpha", "delta"),
-  //    Ballot("beta", "gamma", "alpha", "kappa", "delta"),
-  //    Ballot("beta", "kappa", "alpha", "gamma", "delta"),
-  //    Ballot("kappa", "gamma", "alpha", "beta", "delta"),
-  //    Ballot("alpha", "beta", "delta", "gamma", "kappa"),
-  //    Ballot("kappa", "gamma", "alpha", "beta", "delta"),
-  //    Ballot("gamma", "kappa", "delta", "beta", "alpha"),
-  //    Ballot("gamma", "kappa", "alpha", "beta", "delta"),
-  //    Ballot("kappa", "delta", "alpha", "beta", "gamma")
-  //  )
+  val natoPhonetic = Map(
+      'A' -> "Alpha",
+      'B' -> "Bravo",
+      'C' -> "Charlie",
+      'D' -> "Delta",
+      'E' -> "Echo",
+      'F' -> "Foxtrot",
+      'G' -> "Golf",
+      'H' -> "Hotel",
+      'I' -> "India",
+      'J' -> "Juliet",
+      'K' -> "Kilo",
+      'L' -> "Lima",
+      'M' -> "Mike",
+      'N' -> "November",
+      'O' -> "Oscar",
+      'P' -> "Papa",
+      'Q' -> "Quebec",
+      'R' -> "Romeo",
+      'S' -> "Sierra",
+      'T' -> "Tango",
+      'U' -> "Uniform",
+      'V' -> "Victor",
+      'W' -> "Whiskey",
+      'X' -> "X-ray",
+      'Y' -> "Yankee",
+      'Z' -> "Zulu"
+  )
 
   def letterToCandidate(letter:Char):String = {
-    letter match {
-      case 'A' => "alpha"
-      case 'B' => "beta"
-      case 'C' => "charlie"
-      case 'D' => "delta"
-      case 'E' => "echo"
-    }
+    natoPhonetic(letter.toUpper)
   }
 
   def lettersToBallot(letters:String):Ballot = {
@@ -63,15 +58,15 @@ object PrototypeApp extends App {
     Stream.continually(ballot).take(quantity)
   }
 
-  val ballots =
-    createBallots(5, "ACBED") ++
-      createBallots(5, "ADECB") ++
-      createBallots(8, "BEDAC") ++
-      createBallots(3, "CABED") ++
-      createBallots(7, "CAEBD") ++
-      createBallots(2, "CBADE") ++
-      createBallots(7, "DCEBA") ++
-      createBallots(8, "EBADC")
+  val LinePattern = """(\d+) (\w+)""".r
+
+  def lineToBallots(line:String):Seq[Ballot] = {
+    val LinePattern(quantityString, letters) = line
+    val quantity = quantityString.toInt
+    createBallots(quantity, letters)
+  }
+
+  val ballots = ballotLines.flatMap(lineToBallots)
 
   def candidatesFromBallots(ballots: Seq[Ballot]): Seq[String] = {
     ballots.flatMap(candidatesFromBallot).distinct.sorted
@@ -91,6 +86,10 @@ object PrototypeApp extends App {
     def preference(winnerIndex: Int, loserIndex: Int): Int = {
       val winner = candidates(winnerIndex)
       val loser = candidates(loserIndex)
+      preference(winner,loser)
+    }
+
+    def preference(winner: String, loser: String): Int = {
       preferences(winner)(loser)
     }
 
@@ -144,6 +143,48 @@ object PrototypeApp extends App {
       val rows = Seq(header) ++ body
       TableUtil.createTable(rows)
     }
+
+    def rankings:Seq[Seq[String]] = {
+      val soFar = Seq()
+      rankingsRecursive(soFar)
+    }
+
+    @tailrec
+    private def rankingsRecursive(soFar:Seq[Seq[String]]):Seq[Seq[String]] = {
+      val unranked = findUnranked(soFar)
+      if(unranked.isEmpty){
+        soFar
+      } else {
+        val undefeated = findUndefeated(unranked)
+        rankingsRecursive(soFar :+ undefeated)
+      }
+    }
+
+    private def findUnranked(soFar:Seq[Seq[String]]):Seq[String] = {
+      candidates.filter(isUnranked(_, soFar))
+    }
+
+    private def isUnranked(candidate:String, soFar:Seq[Seq[String]]):Boolean = {
+      soFar.forall(_.forall(candidate != _))
+    }
+
+    private def findUndefeated(unranked:Seq[String]):Seq[String] = {
+      unranked.filter(isUndefeated(_, unranked))
+    }
+
+    private def isUndefeated(candidate:String, unranked:Seq[String]):Boolean = {
+      unranked.forall(isUndefeated(candidate, _))
+    }
+
+    private def isUndefeated(candidate:String, other:String):Boolean = {
+      if(candidate == other){
+        true
+      } else if(preference(candidate, other) < preference(other, candidate)) {
+        false
+      } else {
+        true
+      }
+    }
   }
 
   object Matrix {
@@ -180,8 +221,36 @@ object PrototypeApp extends App {
 
   val matrix = ballots.map(ballotToMatrix).foldLeft(Matrix.Empty)(Matrix.add)
 
+  def place(index:Int):String = {
+    val s = index+1 match {
+      case 1 => "1st"
+      case 2 => "2nd"
+      case 3 => "3rd"
+      case x => x.toString + "th"
+    }
+    s + " place"
+  }
+
+  def formatRanking(candidates:Seq[String], index:Int):String = {
+    if(candidates.size == 1){
+      place(index) + ": " + candidates.head
+    } else {
+      "Tie for " + place(index) + ": " + candidates.mkString(", ")
+    }
+  }
+
+  def formatRankings(rankings:Seq[Seq[String]]):Seq[String] = {
+    rankings.zipWithIndex.map((formatRanking _).tupled)
+  }
+
+  println("Ballots")
+  ballotLines.foreach(println)
   println("Matrix of pairwise preferences")
   matrix.lines().foreach(println)
   println("Strengths of the strongest paths")
-  matrix.strongestPaths.lines().foreach(println)
+  val strongestPaths = matrix.strongestPaths
+  strongestPaths.lines().foreach(println)
+  val rankings = strongestPaths.rankings
+  println("Rankings")
+  formatRankings(rankings).foreach(println)
 }

@@ -6,7 +6,7 @@ So far I have a prototype that checks against the wikipedia entry for the [Schul
 To run:
 
     mvn package
-    java -jar prototype/target/schulze.jar
+    java -jar prototype/target/schulze.jar data/wikipedia-schulze-sample.txt
 
 The output:
 

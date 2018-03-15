@@ -1,0 +1,3 @@
+4 BACD
+3 CABD
+2 DABC
